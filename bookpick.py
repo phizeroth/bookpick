@@ -8,19 +8,19 @@ import time
 
 from peewee import *
 
-db = SqliteDatabase('flicklist.db')
+db = SqliteDatabase('booklist.db')
 
 
 
-class Flick(Model):
+class Book(Model):
 	owner = CharField()
 	rank = IntegerField()
 	title = CharField()
+	author = CharField()
 	genre = CharField()
-	avail = CharField()
-	watched = BooleanField(default=False)
+	read = BooleanField(default=False)
 	date_added = DateField(default=datetime.datetime.now)
-	date_watched = DateField(null=True, default=None)
+	date_read = DateField(null=True, default=None)
 	
 	class Meta:
 		database = db
@@ -31,7 +31,7 @@ class Flick(Model):
 def initialize():
 	"""Create the database and the table if they don't exist"""
 	db.connect()
-	db.create_tables([Flick], safe=True)
+	db.create_tables([Book], safe=True)
 		
 		
 def clear():
@@ -59,15 +59,15 @@ def pretty_table(q, owner):
 	"""Creates pretty table"""
 	rows = []
 	for __ in q:
-		rows.append([__.rank, __.title, __.genre, __.avail])
+		rows.append([__.rank, __.title, __.author, __.genre])
 
 	print("\n| {}'s List |".format(owner))
 
-	col_names = ['rank', 'title', 'genre', 'avail']
+	col_names = ['rank', 'title', 'author', 'genre']
 
 	x = PrettyTable(col_names)
-	x.align[col_names[1]] = 'l'
-	x.align[col_names[2]] = 'r'
+	# x.align[col_names[1]] = 'l'
+	# x.align[col_names[2]] = 'l'
 	x.padding_width = 1
 	for row in rows:
 		x.add_row(row)
@@ -76,22 +76,21 @@ def pretty_table(q, owner):
 			
 # === MENU OPTIONS ===
 
-def add_flick():
-	"""Add a flick"""
+owners_list = ['Finch', 'Amy', 'Shawn']
+
+def add_book():
+	"""Add a book"""
 	while True:
-		inp = input("Whose flick is this?  ").title()
-		if inp in ('Iota', 'Phi'):
+		inp = input("Whose book is this?  ").title()
+		if inp in owners_list:
 			owner_ = inp
 			break
 		else:
 			print("I don't know that person!")
 	
 	title_ = input("Title:  ")
+	author_ = input("Author:  ")
 	genre_ = input("Genre:  ")
-	if input("Is this flick readily available? (y/n)\n>:  ").lower() == 'y':
-		avail_ = input("Source (Netflix, file, etc):  ")
-	else:
-		avail_ = '-'
 	
 	list_all()
 	rank_ = input("Rank:  ")
@@ -99,48 +98,48 @@ def add_flick():
 	if input("Are you sure you want to add \"{}\"? (Y/n):  "
 		.format(title_)).lower() != 'n':
 		
-		if (Flick.select()
-			  .where((Flick.owner == owner_) & (Flick.rank == rank_))
+		if (Book.select()
+			  .where((Book.owner == owner_) & (Book.rank == rank_))
 			  .count() > 0):
-			q = (Flick.update(rank=Flick.rank + 1)
-				 .where((Flick.owner == owner_) & (Flick.rank >= rank_)))
+			q = (Book.update(rank=Book.rank + 1)
+				 .where((Book.owner == owner_) & (Book.rank >= rank_)))
 			q.execute()
 			
-		Flick.create(owner=owner_,
+		Book.create(owner=owner_,
 					 title=title_,
+					 author=author_,
 					 genre=genre_,
-					 rank=rank_,
-					 avail=avail_)
+					 rank=rank_)
 		list_all()
 	
 
 def list_all():
 	"""List all"""
 	def query(owner):
-		return ((Flick.select()
-				 .where(Flick.owner == owner)
-				 .order_by(Flick.rank)), owner)
+		return ((Book.select()
+				 .where(Book.owner == owner)
+				 .order_by(Book.rank)), owner)
 
 	clear()
-	pretty_table(*query("Phi"))
-	pretty_table(*query("Iota"))
+	for each in owners_list:
+		pretty_table(*query(each))
 
 
-def del_flick():
-	"""Delete a flick"""
+def del_book():
+	"""Delete a book"""
 	list_all()
-	inp = input("Enter title of flick to delete:  ")
-	d = Flick.get(Flick.title == inp)
+	inp = input("Enter title of book to delete:  ")
+	d = Book.get(Book.title == inp)
 	if input("Are you sure you want to DELETE \"{}\"? (y/N):  "
 		.format(d.title)).lower() == 'y':
-		q = (Flick.update(rank=Flick.rank - 1)
-			 .where(Flick.rank >= d.rank))
+		q = (Book.update(rank=Book.rank - 1)
+			 .where(Book.rank >= d.rank))
 		q.execute()
 		d.delete_instance()
 
 
 def edit_menu_loop():
-	"""Edit flick"""
+	"""Edit book"""
 	def edit_apply(row, field):
 		cur_value = getattr(row, field)
 		print("Current {}: {}".format(field, cur_value))
@@ -150,25 +149,25 @@ def edit_menu_loop():
 			new_value = int(new_value)
 			
 			if new_value > cur_value:
-				q = (Flick.update(rank=Flick.rank - 1)
-					 .where((Flick.owner == row.owner) & 
-							(Flick.rank > cur_value) &
-							(Flick.rank <= new_value)))
+				q = (Book.update(rank=Book.rank - 1)
+					 .where((Book.owner == row.owner) & 
+							(Book.rank > cur_value) &
+							(Book.rank <= new_value)))
 				q.execute()
 			
 			elif new_value < cur_value:
-				q = (Flick.update(rank=Flick.rank + 1)
-					 .where((Flick.owner == row.owner) & 
-							(Flick.rank < cur_value) &
-							(Flick.rank >= new_value)))
+				q = (Book.update(rank=Book.rank + 1)
+					 .where((Book.owner == row.owner) & 
+							(Book.rank < cur_value) &
+							(Book.rank >= new_value)))
 				q.execute()
 		
 		setattr(row, field, new_value)
 		row.save()
 		
 	list_all()
-	inp = input("Enter title of flick to edit:  ")
-	row = Flick.get(Flick.title == inp)
+	inp = input("Enter title of book to edit:  ")
+	row = Book.get(Book.title == inp)
 	
 	choice = None
 	
@@ -188,58 +187,53 @@ def list_selection():
 	"""List selection"""
 	global tq
 	global gq
-	global vq
 
 	if selections['t'] == "*":
-		tq = (Flick.rank != 666)
+		tq = (Book.rank != 666)
 	else:
-		tq = (Flick.rank <= selections['t'])
+		tq = (Book.rank <= selections['t'])
 
 	if selections['g'] == "*":
-		gq = (Flick.genre != "godisuck")
+		gq = (Book.genre != "godisuck")
 	else:
-		gq = (Flick.genre == selections['g'])
+		gq = (Book.genre == selections['g'])
+	
 
-	if selections['v'] == False:
-		vq = (Flick.avail != "isthisreallythebestwaytodothis?")
-	else:
-		vq = (Flick.avail != "-")
 
 	def query(owner):
-		return ((Flick.select()
-				 .where((Flick.owner == owner) &
-		 				gq & tq & vq)
-				 .order_by(Flick.rank)), owner)
+		return ((Book.select()
+				 .where((Book.owner == owner) &
+		 				gq & tq)
+				 .order_by(Book.rank)), owner)
 
 	clear()
-	pretty_table(*query("Phi"))
-	pretty_table(*query("Iota"))
+	for each in owners_list:
+		pretty_table(*query(each))
 
 
-def flickpick_menu_loop():
-	"""Flickpick Menu"""
+def bookpick_menu_loop():
+	"""Bookpick Menu"""
 	choice = None
 	
 	while choice not in ('x', 'exit'):
 		list_selection()
-		print("\n === flickpick menu ===")
-		for key, value in flickpick_menu.items():
+		print("\n === bookpick menu ===")
+		for key, value in bookpick_menu.items():
 			print("  {}) {}  ({})".format(key, value.__doc__, selections[key]))
 		print(" ------------------")
-		print("  p) Pick a Flick!")
+		print("  p) Pick a Book!")
 		print(" ------------------")
 		print("  c) Clear all selections")
 		print("  x) Exit to main menu")
 		choice = input('\nChoice:  ').lower().strip()
 		
-		if choice in flickpick_menu:
-			flickpick_menu[choice]()
+		if choice in bookpick_menu:
+			bookpick_menu[choice]()
 		elif choice == "c":
 			selections['t'] = "*"
 			selections['g'] = "*"
-			selections['v'] = False
 		elif choice == "p":
-			flickpick_go()
+			bookpick_go()
 
 def choose_genre():
 	"""Choose genre"""
@@ -251,22 +245,22 @@ def choose_top():
 	list_selection()
 	selections['t'] = input("Pick top # ('*' for all):  ")
 
-def toggle_avail():
-	"""Available"""
-	if selections['v'] == False:
-		selections['v'] = True
-	else:
-		selections['v'] = False
+# def toggle_avail():
+# 	"""Available"""
+# 	if selections['v'] == False:
+# 		selections['v'] = True
+# 	else:
+# 		selections['v'] = False
 
 def test_func():
 	"""Test function"""
 	pass
 
-def flickpick_go():
-	"""Pick a Flick!"""
+def bookpick_go():
+	"""Pick a Book!"""
 
-	pick = ((Flick.select()
-			 .where(gq & tq & vq)
+	pick = ((Book.select()
+			 .where(gq & tq)
 			 .order_by(fn.Random()).limit(1))
 			 .get())
 	clear()
@@ -285,17 +279,16 @@ owners = 'pass'
 selections = {
 	't': "*",
 	'g': "*",
-	'v': False
 }
 
 # === MENUS ===
 menu = OrderedDict([
-		('a', add_flick),
-		('d', del_flick),
+		('a', add_book),
+		('d', del_book),
 		('e', edit_menu_loop),
 #		('la', list_all),
-		('p', flickpick_menu_loop),
-#		('lw', list_watched),
+		('p', bookpick_menu_loop),
+#		('lw', list_read),
 #		('test', test_func),
 	])
 
@@ -303,14 +296,12 @@ edit_menu = OrderedDict([
 		('r', 'rank'),
 		('t', 'title'),
 		('g', 'genre'),
-		('a', 'avail'),
-#		('w', 'watched')
+#		('w', 'read')
 	])
 
-flickpick_menu = OrderedDict([
+bookpick_menu = OrderedDict([
 		('t', choose_top),
 		('g', choose_genre),
-		('v', toggle_avail),
 	])
 
 # === MAIN ===
