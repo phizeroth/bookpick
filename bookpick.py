@@ -1,12 +1,11 @@
+import datetime, time
+import os, sys
 from collections import OrderedDict
 from prettytable import PrettyTable
-import datetime
-import os
-import random
-import sys
-import time
 
-from peewee import *
+from peewee import SqliteDatabase, Model
+from peewee import CharField, IntegerField, BooleanField, DateField
+from peewee import fn
 
 db = SqliteDatabase('booklist.db')
 
@@ -265,17 +264,18 @@ def bookpick_go():
 			 .get())
 	clear()
 	print("\n")
-	for c in "=========Your pick is=========":
+	for c in "========= Your pick is =========":
 		sys.stdout.write( '%s' % c )
 		sys.stdout.flush()
 		time.sleep(0.05)
-	print("\n\n" + pick.title.upper().center(30," "))
-	print("\n==============================")
+	print("\n\n" + pick.title.upper().center(32," "))
+	print("\n" + pick.author.center(32," "))
+	print("\n================================")
 	input(">")
 
 
 # === LISTS ===
-owners = 'pass'
+# owners = 'pass'
 selections = {
 	't': "*",
 	'g': "*",
